@@ -23,10 +23,6 @@ contract Router is IRouter, Ownable {
   uint32 withdrawFeeAdmin = 0;
   uint32 withdrawBurn = 0;
   uint32 withdrawFee = 0;
-  modifier onlyOwnerOrServerAdmin(uint32 serverId) {
-    require(_owner == msg.sender || servers[serverId].adminAddress == msg.sender, "-_-");
-    _;
-  }
   
   constructor(IERC20 token, address managerRouter) {
     _token = token;
@@ -35,10 +31,10 @@ contract Router is IRouter, Ownable {
   }
   
   function deposit(uint32 serverId, string calldata nickname, uint amount) external {
-    require(_managerRouter.validate(this) == true, "Server or Router is not valid!");
+    require(_managerRouter.validate(address(this)) == true, "Server or Router is not valid!");
     require(amount > 0, "Amount must be greater than 0");
     
-    uint managerFeeAmount = _getPercenage(amount, _managerRouter.getCommission(this));
+    uint managerFeeAmount = _getPercentage(amount, _managerRouter.getCommission(address(this)));
     uint adminFeeAmount = _getPercentage(amount, depositFeeAdmin);
     uint burnAmount = _getPercentage(amount, depositBurn);
     uint feeAmount = _getPercentage(amount, depositFee);
@@ -52,7 +48,7 @@ contract Router is IRouter, Ownable {
     }
 
     if (adminFeeAmount > 0) {
-      _token.transfer(server.adminAddress, adminFeeAmount);
+      _token.transfer(_owner, adminFeeAmount);
     }
 
     if (managerFeeAmount > 0) {
@@ -72,10 +68,10 @@ contract Router is IRouter, Ownable {
     and there will be no centralized server 
   */
   function withdraw(uint32 serverId, address recipient, string calldata nickname, uint amount) external onlyOwner {
-    require(_managerRouter.validate(this) == true, "Server or Router is not valid!");
+    require(_managerRouter.validate(address(this)) == true, "Server or Router is not valid!");
     require(amount > 0, "Amount must be greater than 0");
 
-    uint managerFeeAmount = _getPercenage(amount, _managerRouter.getCommission(this));
+    uint managerFeeAmount = _getPercentage(amount, _managerRouter.getCommission(address(this)));
     uint adminFeeAmount = _getPercentage(amount, withdrawFeeAdmin);
     uint burnAmount = _getPercentage(amount, withdrawBurn);
     uint feeAmount = _getPercentage(amount, withdrawFee);
@@ -89,7 +85,7 @@ contract Router is IRouter, Ownable {
     }
     
     if (adminFeeAmount > 0) {
-      _token.transfer(server.adminAddress, adminFeeAmount);
+      _token.transfer(_owner, adminFeeAmount);
     }
     
     if (managerFeeAmount > 0) {
