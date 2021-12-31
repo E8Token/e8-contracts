@@ -3,35 +3,32 @@
 pragma solidity ^0.8.0;
 
 import './interfaces/IERC20.sol';
+import './interfaces/IRouter.sol';
 import './interfaces/IManagerRouter.sol';
 import './utils/Ownable.sol';
 
-interface IRouter {
-  event Deposit(uint32 serverId, string username, address indexed sender, uint value);
-  event Withdraw(uint32 serverId, string username, address indexed recipient, uint value);
-}
-
-contract Router is IRouter, Ownable {
+contract CustomerRouter is IRouter, Ownable {
   
   address private constant DEAD = 0x000000000000000000000000000000000000dEaD;
   IERC20 private immutable _token;
   IManagerRouter private _managerRouter;
   address public managerRouterAddress;
-  uint32 depositFeeAdmin = 0;
-  uint32 depositBurn = 0;
-  uint32 depositFee = 0;
-  uint32 withdrawFeeAdmin = 0;
-  uint32 withdrawBurn = 0;
-  uint32 withdrawFee = 0;
+  uint32 public depositFeeAdmin = 0;
+  uint32 public depositBurn = 0;
+  uint32 public depositFee = 0;
+  uint32 public withdrawFeeAdmin = 0;
+  uint32 public withdrawBurn = 0;
+  uint32 public withdrawFee = 0;
   
   constructor(IERC20 token, address managerRouter) {
+    require(address(0) != managerRouter, "Bad manager router");
     _token = token;
     managerRouterAddress = managerRouter;
     _managerRouter = IManagerRouter(managerRouter);
   }
   
   function deposit(uint32 serverId, string calldata nickname, uint amount) external {
-    require(_managerRouter.validate(address(this)) == true, "Server or Router is not valid!");
+    require(_managerRouter.validate(address(this)), "Server or Router is not valid!");
     require(amount > 0, "Amount must be greater than 0");
     
     uint managerFeeAmount = _getPercentage(amount, _managerRouter.getCommission(address(this)));
@@ -68,7 +65,7 @@ contract Router is IRouter, Ownable {
     and there will be no centralized server 
   */
   function withdraw(uint32 serverId, address recipient, string calldata nickname, uint amount) external onlyOwner {
-    require(_managerRouter.validate(address(this)) == true, "Server or Router is not valid!");
+    require(_managerRouter.validate(address(this)), "Server or Router is not valid!");
     require(amount > 0, "Amount must be greater than 0");
 
     uint managerFeeAmount = _getPercentage(amount, _managerRouter.getCommission(address(this)));
@@ -93,6 +90,30 @@ contract Router is IRouter, Ownable {
     }
       
     emit Withdraw(serverId, nickname, recipient, amount);
+  }
+
+  function setDepositFees(uint32 depositFeeAdmin, uint32 depositBurn, uint32 depositFee) external view onlyOwner {
+    require(
+      depositFeeAdmin <= 10000 &&
+      depositBurn <= 10000 &&
+      depositFee <= 10000
+    );
+
+    depositFeeAdmin = depositFeeAdmin;
+    depositBurn = depositBurn;
+    depositFee = depositFee;
+  }
+
+  function setWithdrawFees(uint32 withdrawFeeAdmin, uint32 withdrawBurn, uint32 withdrawFee) external view onlyOwner {
+    require(
+      withdrawFeeAdmin <= 10000 &&
+      withdrawBurn <= 10000 &&
+      withdrawFee <= 10000
+    );
+    
+    withdrawFeeAdmin = withdrawFeeAdmin;
+    withdrawBurn = withdrawBurn;
+    withdrawFee = withdrawFee;
   }
   
   function _getPercentage(uint number, uint32 percent) internal pure returns (uint) {

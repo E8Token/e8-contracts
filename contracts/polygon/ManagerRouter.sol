@@ -6,12 +6,7 @@ import './interfaces/IERC20.sol';
 import './interfaces/IManagerRouter.sol';
 import './utils/Ownable.sol';
 
-interface IRouter {
-  event Deposit(uint32 serverId, string username, address indexed sender, uint value);
-  event Withdraw(uint32 serverId, string username, address indexed recipient, uint value);
-}
-
-contract Router is IRouter, IManagerRouter, Ownable {
+contract ManagerRouter is IManagerRouter, Ownable {
   struct Game {
     string name; // readable game name for dapp
     string icon; // link to the game icon for dapp
@@ -30,15 +25,10 @@ contract Router is IRouter, IManagerRouter, Ownable {
   }
   
   Game[] public games;
-  Routers[] public routers;
+  Router[] public routers;
 
   address private constant DEAD = 0x000000000000000000000000000000000000dEaD;
   IERC20 private immutable _token;
-
-  modifier onlyOwnerOrServerAdmin(uint32 serverId) {
-    require(_owner == msg.sender || servers[serverId].adminAddress == msg.sender, "-_-");
-    _;
-  }
   
   constructor(IERC20 token) {
     _token = token;
@@ -105,19 +95,11 @@ contract Router is IRouter, IManagerRouter, Ownable {
     routers[routerId].commission = value;
   }
 
-  function serversNumber() external view returns (uint) {
-    return servers.length;
-  }
-
   function routerNumber() external view returns (uint) {
       return routers.length;
   }
-  
-  function _getPercentage(uint number, uint32 percent) internal pure returns (uint) {
-    return (number * percent) / 10000;
-  }
 
-  function validate(address contractAddress) external override returns (bool) {
+  function validate(address contractAddress) external override view returns (bool) {
     bool result = false;
     for(uint i = 0; i < routers.length; i++) {
         if(routers[i].contractAddress == contractAddress && routers[i].isActive == true && games[routers[i].gameId].isActive == true) {
@@ -129,7 +111,7 @@ contract Router is IRouter, IManagerRouter, Ownable {
   }
 
   
-  function getCommission(address contractAddress) external returns (uint32) {
+  function getCommission(address contractAddress) external override view returns (uint32) {
         uint32 result = 0;
         for(uint i = 0; i < routers.length; i++) {
             if(routers[i].contractAddress == contractAddress) {
